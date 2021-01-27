@@ -143,8 +143,7 @@ class DasClient(object):
             raise DasClientPermissionDenied(reason)
 
         self.logger.debug("Fail: " + response.text)
-        raise DasClientException(f'Failed to call DAS web service. {response.status_code} {response.text}')
-
+        raise DasClientException("Failed to call DAS web service. {0} {1} ".format(response.status_code, response.text))
         
     def _post(self, path, payload):
         headers = {'Content-Type': 'application/json',
@@ -173,9 +172,14 @@ class DasClient(object):
         if response.status_code == 403:  # forbidden
             raise DasClientPermissionDenied(reason)
 
-        message = f"provider_key: {self.provider_key}, service: {self.service_root}, path: {path},\n\t {response.status_code} from ER. Message: {reason} {response.text}"
+        message = "provider_key: {0}, service: {1}, path: {2},\n\t {3} from ER. Message: {4} {5}".format(self.provider_key,
+                                                                                                         self.service_root,
+                                                                                                         path,
+                                                                                                         response.status_code,
+                                                                                                         reason,
+                                                                                                         response.text)
         self.logger.error(message)
-        raise DasClientException(f"Failed to post to DAS web service. {message}")
+        raise DasClientException("Failed to post to DAS web service. {0}".format(message))
 
     def add_event_to_incident(self, event_id, incident_id):
         
