@@ -1,11 +1,8 @@
 from datetime import datetime, timedelta
-import urllib.parse
 import pytz
 import logging
 import re
 import requests
-import io
-import dateutil.parser as dp
 import json
 from .version import __version__
 
