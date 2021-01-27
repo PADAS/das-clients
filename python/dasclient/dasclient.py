@@ -390,7 +390,7 @@ class DasClient(object):
         return self._get('status')
 
     def get_subject_sources(self, subject_id):
-        return self._get(path=f'subject/{subject_id}/sources')
+        return self._get(path="subject/{0}/sources").format(subject_id)
 
     def get_subject_tracks(self, subject_id='', start=None, end=None):
         """
