@@ -1,4 +1,10 @@
-﻿using System;
+﻿/*
+ * EarthRanger client library
+ * 
+ * We use the google style guide for C# https://google.github.io/styleguide/csharp-style.html
+ */
+
+using System;
 using System.Collections.Generic;
 
 using RestSharp;
@@ -6,116 +12,116 @@ using System.Net;
 
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+using System.IO;
 
 namespace DasClientLib
 {
-    class DasSettings
+    public class AuthToken
     {
-        public static string USERNAME = "chrisd";
-        public static string PASSWORD = "8hubarbTwit";
-        public static string DAS_API = "https://demo.pamdas.org/api/v1.0";
-        public static string DAS_AUTH_API = "https://demo.pamdas.org/oauth2/token";
-        public static string DAS_CLIENT_ID = "das_web_client";
-    }
-
-    class AuthToken
-    {
-        public AuthToken()
+        private AuthToken()
         {
-            this.created_at = DateTime.UtcNow;
+            this.CreatedAt = DateTime.UtcNow;
         }
-        public DateTime created_at { get; }
-        public string access_token { get; set; }
-        public string refresh_token { get; set; }
-        public int expires_in { get; set; }
-        public string scope { get; set; }
-        public string token_type { get; set; }
-        // Fudge the freshness check by 30 seconds, so we won't race against the very second of expiration.
-        public Boolean is_fresh { get { return this.access_token != null && this.created_at.AddSeconds(expires_in) > DateTime.UtcNow.AddSeconds(30); } }
 
-        public static AuthToken parse(string value)
+        private AuthToken(string accessToken)
+        {
+            AccessToken = accessToken;
+            TokenType = "Bearer";
+            _isAccessTokenOnly = true;
+        }
+
+        private bool _isAccessTokenOnly = false;
+        
+        public DateTime CreatedAt { get; }
+        public string AccessToken { get; set; }
+        public string RefreshToken { get; set; }
+        public int ExpiresIn { get; set; }
+        public string Scope { get; set; }
+        public string TokenType { get; set; }
+        // Fudge the freshness check by 30 seconds, so we won't race against the very second of expiration.
+        public Boolean IsFresh { get { return _isAccessTokenOnly || (this.AccessToken != null && this.CreatedAt.AddSeconds(ExpiresIn) > DateTime.UtcNow.AddSeconds(30)); } }
+
+        public static AuthToken Parse(string value)
         {
             return JsonConvert.DeserializeObject<AuthToken>(value);
         }
 
+        public static AuthToken FromAccessToken(string accessToken)
+        {
+            return new AuthToken(accessToken);
+        }
+
     }
 
-    //class DasResponseStatus
-    //{
-    //	public string message { get; set; }
-    //	public int code { get; set; }
-    //}
-    //class DasUser
-    //{
-    //	public string username { get; set;}
-    //	public string email { get; set;}
-    //	public string first_name { get; set; }
-    //	public string last_name { get; set; }
-
-    //}
-
-    //class DasUserResponse
-    //{
-    //	public DasResponseStatus status { get; set; }
-    //	public DasUser data { get; set;}
-
-    //	public static DasUserResponse parse(string value)
-    //	{
-    //		return JsonConvert.DeserializeObject<DasUserResponse>(value);
-    //	}
-    //}
-
-    public class DasSource
+    public class Source
     {
-        public DasSource(string manufacturer_id, string provider,  string source_type, string model_name, Dictionary<string, object> additional)
+        public Source(string manufacturerId, string provider,  string sourceType, string modelName, Dictionary<string, object> additional)
         {
-            this.manufacturer_id = manufacturer_id;
-            this.source_type = source_type;
-            this.model_name = model_name;
+            this.ManufacturerId = manufacturerId;
+            this.source_type = sourceType;
+            this.model_name = modelName;
             this.additional = additional;
             this.provider = provider;
 
 
         }
-        public string manufacturer_id { get; set; }
+        [JsonProperty("manufacturer_id")]
+        public string ManufacturerId { get; set; }
         public string source_type { get; set; }
         public string model_name { get; set; }
         public string provider { get; set; }
         public Dictionary<string, object> additional { get; set; }
-        // public DasSubject
     }
 
     public class Coordinate
     {
-        public float latitude { set; get; }
-        public float longitude { set; get; }
+        public float Latitude { set; get; }
+        public float Longitude { set; get; }
         public Coordinate(float longitude, float latitude)
         {
-            this.longitude = longitude;
-            this.latitude = latitude;
+            this.Longitude = longitude;
+            this.Latitude = latitude;
         }
     }
-    public class DasObservation
+    public class Observation
     {
-        public string source { get; set; }
-        public DateTime recorded_at { get; set; }
-        public Coordinate location { get; set; }
-        public Dictionary<string, object> additional { get; set; }
+        public string Source { get; set; }
+        public DateTime RecordedAt { get; set; }
+        public Coordinate Location { get; set; }
+        public Dictionary<string, object> Additional { get; set; }
 
-        public DasObservation(string source_id, DateTime recorded_at, Coordinate location, Dictionary<string, object> additional)
+        public Observation(string sourceId, DateTime recordedAt, Coordinate location, Dictionary<string, object> additional)
         {
-            this.source = source_id;
-            this.recorded_at = recorded_at;
-            this.location = location;
-            this.additional = additional;
+            this.Source = sourceId;
+            this.RecordedAt = recordedAt;
+            this.Location = location;
+            this.Additional = additional;
         }
+
+    }
+
+    public class Event
+    {
+        [JsonProperty("event_type")]
+        public string EventType { get; set; }
+
 
     }
 
 
     public class DasClientException : Exception
     {
+        public DasClientException()
+        {
+
+        }
+
         public DasClientException(string message) : base(message)
+        {
+
+        }
+
+        public DasClientException(string message, Exception inner) : base(message, inner)
         {
 
         }
@@ -123,50 +129,57 @@ namespace DasClientLib
 
     public class DasClient
     {
-        string username;
-        string password;
-        string das_api;
-        string das_auth_api;
-        string das_client_id;
-        string useragent = "das-data-loader/1.0";
+        string _username;
+        string _password;
+        string _dasApi;
+        string _dasAuthApi;
+        string _dasClientId;
+        string _useragent = "dotnet-data-loader/1.0";
 
-        AuthToken auth_token = null;
+        AuthToken _authToken = null;
 
         private static int[] CREATED = { 200, 201 };
 
-        public DasClient(string username, string password, string das_api, string das_auth_api, string das_client_id)
+        public DasClient(string username, string password, string api, string clientId)
         {
-            this.username = username;
-            this.password = password;
-            this.das_api = das_api;
-            this.das_auth_api = das_auth_api;
-            this.das_client_id = das_client_id;
+            _username = username;
+            _password = password;
+            _dasApi = $"{api}/api/v1.0";
+            _dasAuthApi = $"{api}/oauth2/token";
+            _dasClientId = clientId;
         }
 
-        private Dictionary<string, string> authHeaders()
+        public DasClient(AuthToken token, string api)
+        {
+            _authToken = token;
+            _dasApi = $"{api}/api/v1.0";
+            _dasAuthApi = $"{api}/oauth2/token";
+        }
+
+        private Dictionary<string, string> AuthHeaders()
         {
             Dictionary<string, string> headers = new Dictionary<string, string>();
-            headers.Add("Authorization", String.Format("{0} {1}", this.auth_token.token_type, this.auth_token.access_token));
+            headers.Add("Authorization", String.Format("{0} {1}", this._authToken.TokenType, this._authToken.AccessToken));
             headers.Add("Content-Type", "application/json");
-            headers.Add("User-Agent", this.useragent);
+            headers.Add("User-Agent", this._useragent);
             return headers;
         }
 
-        public Boolean login()
+        public Boolean Login()
         {
-            var payload = String.Format("grant_type=password&username={0}&password={1}&client_id={2}", this.username, this.password, this.das_client_id);
+            var payload = String.Format("grant_type=password&username={0}&password={1}&client_id={2}", this._username, this._password, this._dasClientId);
             return this._token_request(payload);
         }
 
-        public Boolean refreshToken()
+        public Boolean RefreshToken()
         {
-            var payload = String.Format("grant_type=refresh_token&refresh_token={0}&client_id={1}", this.auth_token.refresh_token, this.das_client_id);
+            var payload = String.Format("grant_type=RefreshToken&RefreshToken={0}&client_id={1}", this._authToken.RefreshToken, this._dasClientId);
             return this._token_request(payload);
         }
 
         private Boolean _token_request(string payload)
         {
-            var client = new RestClient(this.das_auth_api);
+            var client = new RestClient(this._dasAuthApi);
 
             var request = new RestRequest(Method.POST);
             request.AddHeader("cache-control", "no-cache");
@@ -176,25 +189,25 @@ namespace DasClientLib
 
             if (response.StatusCode.Equals(HttpStatusCode.OK))
             {
-                this.auth_token = AuthToken.parse(response.Content);
+                this._authToken = AuthToken.Parse(response.Content);
             }
             else
             {
-                this.auth_token = null;
+                this._authToken = null;
             }
 
-            return this.auth_token != null;
+            return this._authToken != null;
         }
 
-        private void _add_auth_headers(RestRequest request)
+        private void AddAuthHeaders(RestRequest request)
         {
-            if (this.auth_token != null)
+            if (this._authToken != null)
             {
-                if (!this.auth_token.is_fresh)
+                if (!this._authToken.IsFresh)
                 {
-                    if (!this.refreshToken())
+                    if (!this.RefreshToken())
                     {
-                        if (!this.login())
+                        if (!this.Login())
                         {
                             throw new DasClientException("Failed to authorize.");
                         }
@@ -205,23 +218,23 @@ namespace DasClientLib
             }
             else
             {
-                if (!this.login())
+                if (!this.Login())
                 {
                     throw new DasClientException("Failed to authorize.");
                 }
             }
-            var headers = this.authHeaders();
+            var headers = this.AuthHeaders();
             foreach (var key in headers.Keys)
             {
                 request.AddHeader(key, headers[key]);
             }
         }
 
-        private JObject _get(string resource)
+        private JObject ApiGet(string resource)
         {
-            var client = new RestClient(String.Format("{0}/{1}", this.das_api, resource));
+            var client = new RestClient(String.Format("{0}/{1}", this._dasApi, resource));
             var request = new RestRequest(Method.GET);
-            this._add_auth_headers(request);
+            this.AddAuthHeaders(request);
 
             IRestResponse response = client.Execute(request);
 
@@ -230,18 +243,22 @@ namespace DasClientLib
                 return JObject.Parse(response.Content);
             }
 
-            throw new DasClientException(String.Format("Failed to get {}", resource));
+            throw new DasClientException($"Failed to get {resource}");
 
         }
 
-        private JObject _post(string resource, object payload)
+        public JObject ApiPostFile(string resource, string filePath, string contentType = null)
         {
-            var client = new RestClient(String.Format("{0}/{1}", this.das_api, resource));
-            var request = new RestRequest(Method.POST);
-            request.RequestFormat = DataFormat.Json;
-            this._add_auth_headers(request);
-            request.AddJsonBody(payload);
-            IRestResponse response = client.Execute(request);
+            var client = new RestClient(this._dasApi);
+            var request = new RestRequest(resource);
+            IRestResponse response = null;
+
+            this.AddAuthHeaders(request);
+            request.AddHeader("Content-Type", "multipart/form-data");
+            request.AddFile("filecontent.file", filePath, contentType);
+
+            response = client.Post(request);
+
 
             if (Array.IndexOf(CREATED, (int)response.StatusCode) >= 0)
             {
@@ -249,13 +266,33 @@ namespace DasClientLib
             }
             else
             {
-                throw new DasClientException(String.Format("Failed to parse DAS response for resource {}", resource));
+                throw new DasClientException($"Failed to Parse DAS response for resource {resource}");
             }
         }
 
-        public JObject getMe()
+        public JObject ApiPost(string resource, object payload)
         {
-            var response = this._get("user/me");
+            var client = new RestClient(this._dasApi);
+            var request = new RestRequest(resource, DataFormat.Json);
+            request.JsonSerializer = new RestSharp.Serializers.NewtonsoftJson.JsonNetSerializer();
+
+            this.AddAuthHeaders(request);
+            request.AddJsonBody(payload);
+            IRestResponse response = client.Post(request);
+
+            if (Array.IndexOf(CREATED, (int)response.StatusCode) >= 0)
+            {
+                return JObject.Parse(response.Content);
+            }
+            else
+            {
+                throw new DasClientException($"Failed to Parse DAS response for resource {resource}");
+            }
+        }
+
+        public JObject Me()
+        {
+            var response = this.ApiGet("user/me");
 
             var code = (int)response["status"]["code"];
             if (code == 200)
@@ -265,23 +302,23 @@ namespace DasClientLib
             return null;
         }
 
-        public JObject postSource(DasSource source)
+        public JObject PostSource(Source source)
         {
-            var result = this._post("sources", source);
+            var result = this.ApiPost("sources", source);
             var src = result["data"];
             return (JObject)src;
         }
 
-        public JObject searchSource(string manufacturer_id)
+        public JObject SearchSource(string manufacturerId)
         {
-            var result = this._get(String.Format("source?manufacturer_id=", manufacturer_id));
+            var result = this.ApiGet(String.Format("source?manufacturer_id=", manufacturerId));
             var src = result["data"];
             return (JObject)src;
         }
 
-        public JObject postObservation(DasObservation observation)
+        public JObject PostObservation(Observation observation)
         {
-            var result = this._post("observations", observation);
+            var result = this.ApiPost("observations", observation);
             var obs = result["data"];
             return (JObject)obs;
 

@@ -1,11 +1,11 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio 14
-VisualStudioVersion = 14.0.25420.1
+# Visual Studio Version 16
+VisualStudioVersion = 16.0.31424.327
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DasClientLib", "DasClientLib\DasClientLib.csproj", "{9934EAC1-790D-43FE-AA8A-9AA5580FB6C3}"
 EndProject
-Project("{F184B08F-C81C-45F6-A57F-5ABD9991F28F}") = "DasClientSample", "DasClientExampleApp\DasClientSample.vbproj", "{A4B00718-BEF3-4E5E-B88F-9D4043513545}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CSharpSample", "CSharpSample\CSharpSample.csproj", "{42431542-995A-45BF-8041-8249947BC28F}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -17,12 +17,15 @@ Global
 		{9934EAC1-790D-43FE-AA8A-9AA5580FB6C3}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{9934EAC1-790D-43FE-AA8A-9AA5580FB6C3}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{9934EAC1-790D-43FE-AA8A-9AA5580FB6C3}.Release|Any CPU.Build.0 = Release|Any CPU
-		{A4B00718-BEF3-4E5E-B88F-9D4043513545}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{A4B00718-BEF3-4E5E-B88F-9D4043513545}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{A4B00718-BEF3-4E5E-B88F-9D4043513545}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{A4B00718-BEF3-4E5E-B88F-9D4043513545}.Release|Any CPU.Build.0 = Release|Any CPU
+		{42431542-995A-45BF-8041-8249947BC28F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{42431542-995A-45BF-8041-8249947BC28F}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{42431542-995A-45BF-8041-8249947BC28F}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{42431542-995A-45BF-8041-8249947BC28F}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {93053DB8-23C4-4801-B693-B38BE7EF454E}
 	EndGlobalSection
 EndGlobal
