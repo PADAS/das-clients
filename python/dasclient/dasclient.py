@@ -540,11 +540,6 @@ class DasClient(object):
     def get_event_schema(self, event_type):
         return self._get(f'activity/events/schema/eventtype/{event_type}')
 
-    def _get_objects_page(self, params, page):
-        params["page"] = page
-        result = self._get(params['object'], params=params)
-        return result.get('results')
-
     def _get_objects_count(self, params):
         params = params.copy()
         params["page"] = 1
