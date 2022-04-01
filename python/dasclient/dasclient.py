@@ -553,9 +553,39 @@ class DasClient(object):
         params = dict((k, v) for k, v in kwargs.items() if k not in ('page'))
         if(not params.get('object')):
             raise ValueError("Must specify object URL")
+
         result = self._get(params['object'], params=params)
         for o in result:
             yield o
+
+        self.logger.debug(f"Getting {params['object']}: ", params)
+
+        count = 0
+        results = self._get(params['object'], params=params)
+
+        while True:
+            if(not results):
+                break
+
+            if('results' in results):
+                for result in results['results']:
+                    yield result
+                    count += 1
+                    if(('max_results' in params) and (count >= params['max_results'])):
+                        return
+                next = results.get('next')
+                if (next and ('page' not in params)):
+                    url = re.sub(f".*{params['object']}?", params['object'], next)
+                    self.logger.debug('Getting more events: ' + url)
+                    results = self._get(url)
+
+                else:
+                    break
+            else:
+                for o in result:
+                    yield o
+                break
+
 
     def get_objects_multithreaded(self, **kwargs):
         threads = kwargs.get("threads", 10)
