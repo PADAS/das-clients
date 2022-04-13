@@ -515,8 +515,8 @@ class DasClient(object):
     def get_event_type(self, event_type_name):
         return self._get(f'activity/events/schema/eventtype/{event_type_name}')
 
-    def get_event_categories(self):
-        return self._get(f'activity/events/categories')
+    def get_event_categories(self, include_inactive=False):
+        return self._get(f'activity/events/categories', params={"include_inactive": include_inactive})
 
     def get_messages(self):
 
@@ -588,7 +588,7 @@ class DasClient(object):
 
 
     def get_objects_multithreaded(self, **kwargs):
-        threads = kwargs.get("threads", 10)
+        threads = kwargs.get("threads", 5)
         params = dict((k, v) for k, v in kwargs.items() if k not in ('page'))
         if(not params.get('object')):
             raise ValueError("Must specify object URL")
