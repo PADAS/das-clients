@@ -534,8 +534,9 @@ class DasClient(object):
             else:
                 break
 
-    def get_event_types(self):
-        return self._get('activity/events/eventtypes')
+    def get_event_types(self, include_inactive = False, include_schema = False):
+        return self._get('activity/events/eventtypes', params =
+            {"include_inactive": include_inactive, "include_schema": include_schema})
 
     def get_event_schema(self, event_type):
         return self._get(f'activity/events/schema/eventtype/{event_type}')
