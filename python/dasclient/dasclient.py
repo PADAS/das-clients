@@ -219,8 +219,22 @@ class DasClient(object):
         if response.status_code == 403:  # forbidden
             raise DasClientPermissionDenied(reason)
 
+        if response.status_code == 504 or response.status_code == 502:  # gateway timeout or bad gateway
+            self.logger.error(f"ER service unavailable", extra=dict(provider_key=self.provider_key,
+                                                                    service=self.service_root,
+                                                                    path=path,
+                                                                    status_code=response.status_code,
+                                                                    reason=reason,
+                                                                    text=response.text))
+            raise DasClientServiceUnavailable(f"ER service unavailable")
+
+        self.logger.error(f"ER returned bad response", extra=dict(provider_key=self.provider_key,
+                                                                  service=self.service_root,
+                                                                  path=path,
+                                                                  status_code=response.status_code,
+                                                                  reason=reason,
+                                                                  text=response.text))
         message = f"provider_key: {self.provider_key}, service: {self.service_root}, path: {path},\n\t {response.status_code} from ER. Message: {reason} {response.text}"
-        self.logger.error(message)
         raise DasClientException(
             f"Failed to {fn} to DAS web service. {message}")
 
@@ -640,7 +654,7 @@ class DasClient(object):
         params = dict((k, v) for k, v in kwargs.items() if k in
                       ('state', 'page_size', 'page', 'event_type', 'filter', 'include_notes',
                        'include_related_events', 'include_files', 'include_details', 'updated_since',
-                       'include_updates', 'max_results'))
+                       'include_updates', 'max_results', 'oldest_update_date', 'event_ids'))
 
         self.logger.debug('Getting events: ', params)
         events = self._get('activity/events', params=params)
@@ -877,6 +891,10 @@ class DasClientException(Exception):
 
 
 class DasClientPermissionDenied(DasClientException):
+    pass
+
+
+class DasClientServiceUnavailable(DasClientException):
     pass
 
 

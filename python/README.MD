@@ -1,4 +1,13 @@
-# DAS Client
+# DAS Client - DEPRECATED
+
+new development has moved to https://github.com/PADAS/er-client
+
+
+
+
+
+
+
 ## Create a new release
 1. increment version as appropriate in version.py
 2. install venv
