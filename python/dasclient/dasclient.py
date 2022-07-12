@@ -155,7 +155,10 @@ class DasClient(object):
             data = json.loads(response.text)
             if 'metadata' in data:
                 return data['metadata']
-            return data['data']
+            elif 'data' in data:
+                return data['data']
+            else:
+                return data
 
         if response.status_code == 404:  # not found
             self.logger.error(f"404 when calling {path}")
@@ -171,7 +174,7 @@ class DasClient(object):
 
         self.logger.debug("Fail: " + response.text)
         raise DasClientException(
-            f'Failed to call DAS web service. {response.status_code} {response.text}')
+            f"Failed to call DAS web service at {response.url}. {response.status_code} {response.text}")
 
     def _call(self, path, payload, method, params=None):
         headers = {'Content-Type': 'application/json',
@@ -323,6 +326,19 @@ class DasClient(object):
         self.logger.error('provider_key: %s, path: %s\n\tBad result from das service. Message: %s',
                           self.provider_key, path, response.text)
         raise DasClientException('Failed to post to DAS web service.')
+
+
+    def post_eventprovider(self, eventprovider):
+        self.logger.debug('Posting eventprovider: %s', eventprovider)
+        result = self._post('activity/eventproviders/', payload=eventprovider)
+        self.logger.debug('Result of eventprovider post is: %s', result)
+        return result
+
+    def post_eventsource(self, eventprovider_id, eventsource):
+        self.logger.debug('Posting eventsource: %s', eventsource)
+        result = self._post(f'activity/eventprovider/{eventprovider_id}/eventsources', payload=eventsource)
+        self.logger.debug('Result of eventsource post is: %s', result)
+        return result
 
     def post_event_photo(self, event_id, image):
 
@@ -548,8 +564,9 @@ class DasClient(object):
             else:
                 break
 
-    def get_event_types(self, **params):
-        return self._get('activity/events/eventtypes', params=params)
+    def get_event_types(self, include_inactive = False, include_schema = False):
+        return self._get('activity/events/eventtypes', params =
+            {"include_inactive": include_inactive, "include_schema": include_schema})
 
     def get_event_schema(self, event_type):
         return self._get(f'activity/events/schema/eventtype/{event_type}')
@@ -568,12 +585,7 @@ class DasClient(object):
         if(not params.get('object')):
             raise ValueError("Must specify object URL")
 
-        result = self._get(params['object'], params=params)
-        for o in result:
-            yield o
-
         self.logger.debug(f"Getting {params['object']}: ", params)
-
         count = 0
         results = self._get(params['object'], params=params)
 
@@ -589,15 +601,17 @@ class DasClient(object):
                         return
                 next = results.get('next')
                 if (next and ('page' not in params)):
-                    url = re.sub(f".*{params['object']}?", params['object'], next)
-                    self.logger.debug('Getting more events: ' + url)
+                    url = next
+                    self.logger.debug('Getting more objects: ' + url)
                     results = self._get(url)
-
                 else:
                     break
-            else:
-                for o in result:
+            elif(type(results) == list):
+                for o in results:
                     yield o
+                break
+            else:
+                yield results
                 break
 
 
@@ -620,13 +634,21 @@ class DasClient(object):
                 temp_params["page"] = page
                 futures.append(executor.submit(self._get, params['object'], params=temp_params))
             for future in concurrent.futures.as_completed(futures):
-                try:
-                    result = future.result()
-                    for e in result['results']:
-                        yield e
-                except Exception as e:
-                    logging.error(f"Error occurred loading events: {e}")
-                    raise e
+                max_retries = kwargs.get("retries", 0)
+                tries = 0
+                while(True):
+                    tries += 1
+                    try:
+                        result = future.result()
+                        for e in result['results']:
+                            yield e
+                        break
+                    except Exception as e:
+                        if(tries > max_retries):
+                            logging.error(f"Error occurred loading events: {e}")
+                            raise e
+                        else:
+                            logging.warning(f"Attempt {tries} of {max_retries}: Error occurred loading events: {e}.")
 
     def get_events(self, **kwargs):
         params = dict((k, v) for k, v in kwargs.items() if k in
@@ -698,19 +720,11 @@ class DasClient(object):
         return self._get(path=f'subject/{subject_id}/subjectsources')
 
     def get_source_provider(self, provider_key):
-        results = self._get('sourceproviders')
+        results = self.get_objects(object="sourceproviders")
 
-        while True:
-            if results and results.get('results'):
-                for r in results['results']:
-                    if(r.get('provider_key') == provider_key):
-                        return r
-
-            if results and results['next']:
-                url, params = split_link(results['next'])
-                results = self._get(path='sourceproviders', params = params)
-            else:
-                break
+        for r in results:
+            if(r.get('provider_key') == provider_key):
+                return r
 
         return None
 
